@@ -138,11 +138,10 @@ class winner_portfolio:
             "begin_value": previous_values,
             "end_value": portfolio_values
         })
-
         result["profit"] = result["end_value"] - result["begin_value"]
         result["portfolio_return"] = result["profit"] / result["begin_value"]
         result["entry_month"] = month.to_period("M")
-
+        result = pd.concat([result, asset_values], axis=1)
         return result.reset_index()
 
 
@@ -160,7 +159,7 @@ class winner_portfolio:
             results.append(result)
 
             capital[slot] = result["end_value"].iloc[-1]
-
+        self.capital = capital
         return pd.concat(results, ignore_index=True)
 
     def organize_output(self, capital, backtest_result, rf_gross, prepare_csv:bool = False):
