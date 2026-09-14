@@ -65,7 +65,7 @@ def assign_deciles(df: pd.DataFrame, n_deciles: int = N_DECILES) -> pd.DataFrame
     df.loc[eligible, "decile"] = (
         df.loc[eligible]
         .groupby("month")["formation_ret"]
-        .transform(lambda x: pd.qcut(x, n_deciles, labels=False, duplicates="drop") + 1)
+        .transform(lambda x: pd.qcut(x, n_deciles, labels=False, duplicates="drop") + 1) 
     )
     return df
 

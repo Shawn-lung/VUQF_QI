@@ -7,7 +7,7 @@ if __name__=="__main__":
     capital = 10000000
     rf_monthly = 1.01**(1/12)
     monthly, summary, latest, df = run_momentum()
-    prepare_csv = False
+    prepare_csv = True
     if prepare_csv:
         save_winners(df, output_dir)
         save_expected_returns(monthly, output_dir)

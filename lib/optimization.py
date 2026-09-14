@@ -66,7 +66,7 @@ class winner_portfolio:
         return self.optimal_weights(covariance)
 
     def del_assets(self, winners, month):
-        start = month - pd.DateOffset(years=5)
+        start = month - pd.DateOffset(years=2)
 
         train = self.daily.loc[
             (self.daily["DlyCalDt"] >= start)
