@@ -61,31 +61,32 @@ class winner_portfolio:
         self.exits["exit_month"] = self.exits["exit_month"].dt.to_period("M")
 
     def cal_covariance(self, df):
-        returns = df.pivot(index= 'DlyCalDt', columns='PERMNO', values='DlyRet')
+        returns = df.pivot(index='DlyCalDt', columns='PERMNO', values='DlyRet')
         covariance = returns.cov()
-        return self.optimal_weight(covariance)
+        return self.optimal_weights(covariance)
 
     def del_assets(self, winners, month):
-        start = month- pd.DateOffset(years=5)
+        start = month - pd.DateOffset(years=5)
 
         train = self.daily.loc[
             (self.daily["DlyCalDt"] >= start)
-            &(self.daily["DlyCalDt"] < month)
+            & (self.daily["DlyCalDt"] < month)
         ]
 
         df = train.loc[train["PERMNO"].isin(winners['PERMNO'])]
-        counts = df.groupby("PERMNO")["DlyRet"].count()
-        counts = counts.reindex(winners["PERMNO"], fill_value=0)
+        #counts = df.groupby("PERMNO")["DlyRet"].count()
+        #counts = counts.reindex(winners["PERMNO"], fill_value=0)
         n_days = train["DlyCalDt"].nunique()
         df_after = df.groupby("PERMNO").filter(
             lambda stock: stock["DlyRet"].count() == n_days
         )
 
         return self.cal_covariance(df_after)
+
     def portfolio_variance(self, weights, cov):
         return weights @ cov @ weights
     
-    def optimal_weight(self, covariance):
+    def optimal_weights(self, covariance):
         cov = covariance.to_numpy()
         n_assets = len(covariance)
         initial_weights = np.ones(n_assets) / n_assets
@@ -94,10 +95,10 @@ class winner_portfolio:
             x0=initial_weights,
             args=(cov,),
             method="SLSQP",
-            bounds=[(0,0.1)]*n_assets,
+            bounds=[(0,0.1)] * n_assets,
             constraints={"type": "eq", "fun": lambda w: w.sum() - 1},
-            options={"ftol":1e-12, "maxiter": 1000}
-            )
+            options={"ftol": 1e-12, "maxiter": 1000}
+        )
         if not res.success:
             raise RuntimeError(res.message)
         return pd.Series(
@@ -110,8 +111,8 @@ class winner_portfolio:
         start = month.to_period("M")
         end = start + 6
         returns = self.monthly.loc[
-            (self.monthly["month"] >=start)&
-            (self.monthly["month"] < end)
+            (self.monthly["month"] >=start)
+            & (self.monthly["month"] < end)
         ]
         returns = returns.pivot(
             index="month",
@@ -129,7 +130,7 @@ class winner_portfolio:
             raise ValueError(f"{month}: missing return")
         gross_returns = 1 + returns
         growth = gross_returns.cumprod()
-        asset_values = growth.mul(weights, axis="columns")*capital
+        asset_values = growth.mul(weights, axis="columns") * capital
         portfolio_values = asset_values.sum(axis=1)
         previous_values = portfolio_values.shift(1)
         previous_values.iloc[0] = capital
@@ -145,8 +146,8 @@ class winner_portfolio:
         return result.reset_index()
 
 
-    def backtest(self, captial, rf):
-        capital = [captial/6 *rf**i for i in range(6)] 
+    def backtest(self, initial_capital, rf):
+        capital = [initial_capital / 6 * rf**i for i in range(6)] 
         results = []
 
         for i, (month, df) in enumerate(
@@ -162,13 +163,13 @@ class winner_portfolio:
 
         return pd.concat(results, ignore_index=True)
 
-    def organize_output(self, capital, bt, rf, prepare_csv:bool=False):
-        values = bt.groupby("month")[["profit", "begin_value"]].sum()
+    def organize_output(self, capital, backtest_result, rf_gross, prepare_csv:bool = False):
+        values = backtest_result.groupby("month")[["profit", "begin_value"]].sum()
         for i, month in enumerate(values.index[:5]):
-            cash_begin = (5 - i) * capital / 6 * rf**i
+            cash_begin = (5 - i) * capital / 6 * rf_gross**i
 
             values.loc[month, "begin_value"] += cash_begin
-            values.loc[month, "profit"] += cash_begin * (rf - 1)
+            values.loc[month, "profit"] += cash_begin * (rf_gross - 1)
         values["strategy_return"] = (
             values["profit"] / values["begin_value"]
         )
@@ -185,7 +186,7 @@ class winner_portfolio:
 
         annualized_volatility = returns.std() * np.sqrt(12)
 
-        excess_returns = returns - (rf - 1)
+        excess_returns = returns - (rf_gross - 1)
         sharpe_ratio = (
             excess_returns.mean() / excess_returns.std() * np.sqrt(12)
         )
@@ -197,10 +198,10 @@ class winner_portfolio:
 
         if prepare_csv:
             output_path = (
-                        Path(__file__).resolve().parent.parent
-                        / "outputs"
-                        / "values.csv"
-                    )
+                Path(__file__).resolve().parent.parent
+                / "outputs"
+                / "values.csv"
+            )
             values.to_csv(output_path, index=True)
             summary.to_csv(output_path.parent / "performance_summary.csv")
 
