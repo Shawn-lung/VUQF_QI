@@ -35,7 +35,7 @@ def export_to_excel(final_weights, capital):
         ws.cell(row=int(i) + 21, column=8, value=int(shares))
     ws["C12"] = capital
     ws["H21"] = float(rf_investment)
-    ws["I16"] = "=SUM(I22:I526)"
+    ws["I16"] = f"=SUM(I22:I{len(df) + 21})"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
